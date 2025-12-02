@@ -7,32 +7,38 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import random
+import csv
 import math
 
-# --- Graphing ---
+# --- グラフ描画用 ---
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import mplfinance as mpf
 
 # ---------------------------------------------------------
-# Constants & Colors (GMO Click Securities Style)
+# 設定・定数・配色 (GMOクリック証券風ダークテーマ)
 # ---------------------------------------------------------
 CSV_FILE = "login.csv"
-UPDATE_INTERVAL = 1000  # ms (1.0 second)
+UPDATE_INTERVAL = 1000  # 更新間隔 (ms) = 1秒
 
-# Color Palette
-COLOR_BG_MAIN = "#0e1629"
-COLOR_HEADER = "#050a15"
-COLOR_PANEL_BG = "#1c2640"
-COLOR_PANEL_WHITE = "#ffffff"
+# 配色定義
+COLOR_BG_LOGIN = "#0e1629"     # ログイン画面背景
+COLOR_PANEL_LOGIN = "#1c2640"  # ログインパネル背景
+COLOR_BTN_LOGIN = "#f3c648"    # ログインボタン
+COLOR_BTN_DEMO = "#58aebf"     # デモボタン
+COLOR_BTN_ACC = "#222222"      # 口座開設ボタン
+
+COLOR_BG_MAIN = "#0e1629"      # メイン背景
+COLOR_HEADER = "#050a15"       # ヘッダー/フッター
+COLOR_PANEL_BG = "#1c2640"     # パネル背景
+COLOR_PANEL_WHITE = "#ffffff"  # 情報パネル
 COLOR_TEXT_MAIN = "#ffffff"
-COLOR_TEXT_BLACK = "#000000"
-COLOR_ACCENT_RED = "#e74c3c"
-COLOR_ACCENT_BLUE = "#3498db"
+COLOR_ACCENT_RED = "#e74c3c"   # Ask/上昇
+COLOR_ACCENT_BLUE = "#3498db"  # Bid/下落
 COLOR_ACCENT_GOLD = "#f39c12"
 COLOR_BTN_MENU = "#24345e"
 
-# Fonts
+# フォント設定
 FONT_L = ("Meiryo UI", 16, "bold")
 FONT_M = ("Meiryo UI", 12)
 FONT_S = ("Meiryo UI", 10)
@@ -41,10 +47,10 @@ FONT_NUM_M = ("Arial", 18, "bold")
 FONT_NUM_S = ("Arial", 14, "bold")
 
 # ---------------------------------------------------------
-# Common Functions
+# 共通関数
 # ---------------------------------------------------------
 def center_window(window, width, height):
-    """Centers the window on the screen"""
+    """ウィンドウを画面中央に配置"""
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
     x = (screen_width // 2) - (width // 2)
@@ -52,12 +58,12 @@ def center_window(window, width, height):
     window.geometry(f"{width}x{height}+{x}+{y}")
 
 # ---------------------------------------------------------
-# Data Manager
+# データ管理クラス
 # ---------------------------------------------------------
 class DataManager:
     @staticmethod
     def fetch_real_data():
-        """Fetches data from external module or returns dummy"""
+        """外部モジュールまたはダミーからデータを取得"""
         try:
             import repRateModu01
             fd = repRateModu01.fetch_get_FXrate()
@@ -71,7 +77,7 @@ class DataManager:
 
     @staticmethod
     def create_dummy_dataframe():
-        # FX Dummy
+        # FXダミー
         fx_data = []
         for pair in ['USD_JPY', 'EUR_JPY', 'GBP_JPY', 'TRY_JPY']:
             base = 150.0 if 'USD' in pair else 160.0
@@ -81,7 +87,7 @@ class DataManager:
                 'high': bid + 0.5, 'low': bid - 0.5
             })
         
-        # Crypto Dummy
+        # Cryptoダミー
         crypto_data = []
         for pair in ['BTC_JPY', 'ETH_JPY', 'XRP_JPY', 'DOGE_JPY']:
             base = 14000000 if 'BTC' in pair else 500000
@@ -125,10 +131,11 @@ class DataManager:
         return news_data
 
 # ---------------------------------------------------------
-# View Classes
+# 各画面（タブ）のクラス
 # ---------------------------------------------------------
 
 class HomeView(tk.Frame):
+    """【ホーム】 資産状況とメニュー"""
     def __init__(self, master):
         super().__init__(master, bg=COLOR_BG_MAIN)
         self.create_layout()
@@ -166,10 +173,11 @@ class HomeView(tk.Frame):
 
 
 class TradeView(tk.Frame):
+    """【トレード】 リアルタイムレート一覧 (軽量化済み)"""
     def __init__(self, master):
         super().__init__(master, bg=COLOR_BG_MAIN)
         self.rate_labels = {} 
-        self.prev_values = {} # To avoid unnecessary updates
+        self.prev_values = {} # チラつき防止用の前回値保存
         self.create_layout()
 
     def create_layout(self):
@@ -177,7 +185,7 @@ class TradeView(tk.Frame):
         self.columnconfigure(1, weight=2)
         self.rowconfigure(0, weight=1)
 
-        # Left: Rates
+        # --- レート表 ---
         left_panel = tk.Frame(self, bg=COLOR_BG_MAIN, padx=10, pady=10)
         left_panel.grid(row=0, column=0, sticky="nsew")
 
@@ -196,6 +204,7 @@ class TradeView(tk.Frame):
         for i, pair in enumerate(self.display_pairs, start=2):
             tk.Label(left_panel, text=pair, font=FONT_M, bg=COLOR_BG_MAIN, fg="white").grid(row=i, column=0, sticky="w", pady=8, padx=5)
             
+            # ラベル生成・配置
             self.rate_labels[f"{pair}_bid"] = tk.Label(left_panel, text="-", font=FONT_NUM_S, bg=COLOR_BG_MAIN, fg=COLOR_ACCENT_BLUE)
             self.rate_labels[f"{pair}_bid"].grid(row=i, column=1, sticky="e", padx=5)
 
@@ -210,7 +219,7 @@ class TradeView(tk.Frame):
             
             ttk.Separator(left_panel, orient="horizontal").grid(row=i*10+5, column=0, columnspan=5, sticky="ew", pady=0)
 
-        # Right: Positions
+        # --- 建玉一覧 ---
         right_panel = tk.Frame(self, bg=COLOR_BG_MAIN, padx=10, pady=10)
         right_panel.grid(row=0, column=1, sticky="nsew")
 
@@ -234,17 +243,21 @@ class TradeView(tk.Frame):
         tree.insert("", "end", values=("USD/JPY", "買", "10,000", "+12,500"))
 
     def update_table(self, fx_df, crypto_df):
+        """データ更新処理"""
         try:
+            # 1. FX
             for sym in ["USD_JPY", "EUR_JPY", "GBP_JPY", "TRY_JPY"]:
                 row = fx_df.loc[fx_df['symbol'] == sym]
                 if not row.empty:
                     self._update_row(sym.replace("_", "/"), row.iloc[0], is_crypto=False)
 
+            # 2. Crypto
             for sym in ["BTC_JPY", "ETH_JPY", "XRP_JPY", "DOGE_JPY"]:
                 row = crypto_df.loc[crypto_df['symbol'] == sym]
                 if not row.empty:
                     self._update_row(sym.replace("_", "/"), row.iloc[0], is_crypto=True)
 
+            # 3. BTC/USD 計算
             usd = fx_df.loc[fx_df['symbol'] == 'USD_JPY']
             btc = crypto_df.loc[crypto_df['symbol'] == 'BTC_JPY']
             
@@ -254,9 +267,9 @@ class TradeView(tk.Frame):
                 b_bid = float(btc.iloc[0]['bid'])
                 b_ask = float(btc.iloc[0]['ask'])
                 
+                # クロスレート
                 calc_bid = b_bid / u_ask
                 calc_ask = b_ask / u_bid
-                
                 data = {'bid': calc_bid, 'ask': calc_ask, 'high': 0, 'low': 0}
                 self._update_row("BTC/USD", pd.Series(data), is_crypto=False)
 
@@ -264,10 +277,10 @@ class TradeView(tk.Frame):
             pass
 
     def _update_row(self, pair, data, is_crypto):
+        """値が変わった場合のみラベルを更新する（チラつき防止）"""
         fmt = "{:,.0f}" if is_crypto and "BTC" in pair else "{:,.3f}"
         if pair == "BTC/USD": fmt = "{:,.2f}"
 
-        # Optimization: Only update if text has changed
         vals = {
             'bid': fmt.format(float(data['bid'])),
             'ask': fmt.format(float(data['ask'])),
@@ -275,7 +288,6 @@ class TradeView(tk.Frame):
             'low': fmt.format(float(data.get('low', 0)))
         }
 
-        # Compare with previous values to reduce flickering
         if f"{pair}_bid" in self.rate_labels:
             self._set_text(f"{pair}_bid", vals['bid'])
             self._set_text(f"{pair}_ask", vals['ask'])
@@ -283,12 +295,14 @@ class TradeView(tk.Frame):
             if float(data.get('low', 0)) > 0: self._set_text(f"{pair}_low", vals['low'])
 
     def _set_text(self, key, text):
+        """前回と同じ値なら更新しない"""
         if self.prev_values.get(key) != text:
             self.rate_labels[key].config(text=text)
             self.prev_values[key] = text
 
 
 class SpeedOrderView(tk.Frame):
+    """【スピード注文】"""
     def __init__(self, master):
         super().__init__(master, bg=COLOR_BG_MAIN)
         self.create_layout()
@@ -296,32 +310,26 @@ class SpeedOrderView(tk.Frame):
     def create_layout(self):
         container = tk.Frame(self, bg=COLOR_BG_MAIN)
         container.pack(expand=True)
-        header = tk.Frame(container, bg=COLOR_BG_MAIN)
-        header.pack(fill="x", pady=10)
-        tk.Label(header, text="🇺🇸🇯🇵 USD/JPY", font=("Arial", 24, "bold"), fg="white", bg=COLOR_BG_MAIN).pack()
+        tk.Label(container, text="🇺🇸🇯🇵 USD/JPY", font=("Arial", 24, "bold"), fg="white", bg=COLOR_BG_MAIN).pack(pady=10)
 
         rate_frame = tk.Frame(container, bg=COLOR_BG_MAIN)
         rate_frame.pack(pady=20)
 
-        btn_bid = tk.Button(rate_frame, text="BID (売)\n155.497", font=("Arial", 20, "bold"),
-                            bg=COLOR_ACCENT_BLUE, fg="white", width=15, height=3, relief="flat")
-        btn_bid.pack(side="left", padx=10)
-
+        tk.Button(rate_frame, text="BID (売)\n155.497", font=("Arial", 20, "bold"),
+                  bg=COLOR_ACCENT_BLUE, fg="white", width=15, height=3, relief="flat").pack(side="left", padx=10)
         tk.Label(rate_frame, text="0.2", font=("Arial", 14), fg="white", bg="#333", width=4).pack(side="left")
-
-        btn_ask = tk.Button(rate_frame, text="ASK (買)\n155.499", font=("Arial", 20, "bold"),
-                            bg=COLOR_ACCENT_RED, fg="white", width=15, height=3, relief="flat")
-        btn_ask.pack(side="left", padx=10)
+        tk.Button(rate_frame, text="ASK (買)\n155.499", font=("Arial", 20, "bold"),
+                  bg=COLOR_ACCENT_RED, fg="white", width=15, height=3, relief="flat").pack(side="left", padx=10)
 
         ctrl_frame = tk.Frame(container, bg=COLOR_PANEL_BG, padx=20, pady=20)
         ctrl_frame.pack(fill="x", pady=20)
         tk.Label(ctrl_frame, text="取引数量 (×10,000)", font=FONT_M, fg="white", bg=COLOR_PANEL_BG).pack()
-        spin = tk.Spinbox(ctrl_frame, from_=1, to=100, font=("Arial", 20), width=10, justify="center")
-        spin.pack(pady=10)
+        tk.Spinbox(ctrl_frame, from_=1, to=100, font=("Arial", 20), width=10, justify="center").pack(pady=10)
         tk.Button(ctrl_frame, text="全決済", bg="#555", fg="white", font=FONT_M, width=20).pack(pady=10)
 
 
 class MarketView(tk.Frame):
+    """【マーケット】"""
     def __init__(self, master):
         super().__init__(master, bg=COLOR_BG_MAIN)
         self.create_layout()
@@ -343,11 +351,11 @@ class MarketView(tk.Frame):
 
 
 class ChartView(tk.Frame):
-    """【チャート】 ローソク足表示（軽量化対策済み）"""
+    """【チャート】 軽量化・リサイズ対応済み"""
     def __init__(self, master):
         super().__init__(master, bg=COLOR_BG_MAIN)
         self.chart_frame = None
-        self.resize_timer = None  # 【追加】再描画待ちタイマー
+        self.resize_timer = None
         self.create_layout()
 
     def create_layout(self):
@@ -358,23 +366,16 @@ class ChartView(tk.Frame):
         self.chart_frame = tk.Frame(self, bg="black")
         self.chart_frame.pack(fill="both", expand=True)
         
-        # 初回描画
         self.draw_chart()
-
-        # 【追加】サイズ変更イベントを監視
         self.chart_frame.bind("<Configure>", self.on_resize)
 
     def on_resize(self, event):
-        """サイズ変更中に何度も描画されるのを防ぐ処理"""
-        # 前回の予約があればキャンセル（「まだ描画するな！」）
+        """リサイズ時の負荷軽減（デバウンス処理）"""
         if self.resize_timer:
             self.after_cancel(self.resize_timer)
-        
-        # 0.5秒後に描画を予約（マウスを止めたら描画されるようになる）
         self.resize_timer = self.after(500, self.draw_chart)
 
     def draw_chart(self):
-        # 既存のグラフがあれば削除（メモリリーク防止）
         for widget in self.chart_frame.winfo_children():
             widget.destroy()
 
@@ -382,15 +383,14 @@ class ChartView(tk.Frame):
         mc = mpf.make_marketcolors(up=COLOR_ACCENT_RED, down=COLOR_ACCENT_BLUE, 
                                    edge='inherit', wick='inherit', volume='in')
         s = mpf.make_mpf_style(marketcolors=mc, base_mpf_style='nightclouds', gridstyle=':')
-        
-        # チャート生成
         fig, axes = mpf.plot(df, type='candle', style=s, volume=False, returnfig=True, figsize=(10, 6))
-        
         canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True)
+
+
 # ---------------------------------------------------------
-# Main App
+# メインアプリ
 # ---------------------------------------------------------
 class MainApp(tk.Tk):
     def __init__(self):
@@ -400,15 +400,16 @@ class MainApp(tk.Tk):
         self.configure(bg=COLOR_BG_MAIN)
         center_window(self, 1280, 800)
 
+        # 1. フッター
         self.create_footer()
         
+        # 2. コンテナ (リサイズ追従設定を追加)
         self.container = tk.Frame(self, bg=COLOR_BG_MAIN)
         self.container.pack(side="top", fill="both", expand=True)
+        self.container.grid_rowconfigure(0, weight=1)    # 【重要】
+        self.container.grid_columnconfigure(0, weight=1) # 【重要】
 
-        # 【追加】ここから：コンテナ内のグリッドを伸縮可能にする設定
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
-
+        # 各画面
         self.frames = {}
         for F in (HomeView, TradeView, SpeedOrderView, MarketView, ChartView):
             page_name = F.__name__
@@ -416,21 +417,26 @@ class MainApp(tk.Tk):
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame("TradeView")
+        self.running = False
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def start(self, username):
+        """ログイン後に呼び出されるメソッド"""
+        self.deiconify()
+        self.show_frame("TradeView")
         
+        # ユーザー名表示などが必要ならここで行う
+        self.title(f"Trading View - {username}")
+
+        # データ更新ループ開始
         self.running = True
-        # Start data loop
         self.update_data()
 
     def create_footer(self):
         footer = tk.Frame(self, bg=COLOR_HEADER, height=60)
         footer.pack(side="bottom", fill="x")
-        tabs = [
-            ("🏠 ホーム", "HomeView"), ("📈 トレード", "TradeView"),
-            ("⚡ スピード", "SpeedOrderView"), ("🌏 マーケット", "MarketView"),
-            ("📉 チャート", "ChartView")
-        ]
+        tabs = [("🏠 ホーム", "HomeView"), ("📈 トレード", "TradeView"),
+                ("⚡ スピード", "SpeedOrderView"), ("🌏 マーケット", "MarketView"), ("📉 チャート", "ChartView")]
         for text, view_name in tabs:
             btn = tk.Button(footer, text=text, font=("Meiryo UI", 11, "bold"),
                             bg=COLOR_HEADER, fg="#aaa", bd=0, activebackground="#222", activeforeground="white",
@@ -440,22 +446,16 @@ class MainApp(tk.Tk):
     def show_frame(self, page_name):
         frame = self.frames[page_name]
         frame.tkraise()
-        #  - Conceptually, this brings the frame to the top of the stack.
 
     def update_data(self):
-        """Fetch data and update UI in a loop"""
+        """データ更新ループ (スレッド + after)"""
         if not self.running: return
-
-        # Running in a separate thread to prevent UI freezing during fetch
         threading.Thread(target=self._fetch_and_update, daemon=True).start()
-        
-        # Schedule next update
         self.after(UPDATE_INTERVAL, self.update_data)
 
     def _fetch_and_update(self):
         fd, fg = DataManager.fetch_real_data()
         if not fd.empty and not fg.empty:
-            # Schedule the UI update on the main thread
             self.after(0, lambda: self.frames["TradeView"].update_table(fd, fg))
 
     def on_close(self):
@@ -465,33 +465,129 @@ class MainApp(tk.Tk):
         sys.exit()
 
 # ---------------------------------------------------------
-# Login Window
+# ログイン画面
 # ---------------------------------------------------------
-class LoginWindow(tk.Toplevel):
-    def __init__(self, main_app):
-        super().__init__()
-        self.main_app = main_app
-        self.title("Login")
-        self.configure(bg=COLOR_BG_MAIN)
-        center_window(self, 400, 600)
-        self.protocol("WM_DELETE_WINDOW", sys.exit)
+class Login:
+    def __init__(self, master, main):
+        self.master = master
+        self.main = main
+        self.widgets = []
         self.create_widgets()
 
     def create_widgets(self):
-        tk.Label(self, text="GMOクリック FX", font=("Arial", 24, "bold"), bg=COLOR_BG_MAIN, fg="white").pack(pady=50)
-        tk.Label(self, text="ユーザーID", bg=COLOR_BG_MAIN, fg="white").pack()
-        self.entry_id = tk.Entry(self, font=FONT_M)
-        self.entry_id.pack(pady=5)
-        tk.Label(self, text="パスワード", bg=COLOR_BG_MAIN, fg="white").pack()
-        self.entry_pw = tk.Entry(self, font=FONT_M, show="*")
-        self.entry_pw.pack(pady=5)
-        tk.Button(self, text="ログイン", font=FONT_M, bg=COLOR_ACCENT_GOLD, fg="white", width=20,
-                  command=self.do_login).pack(pady=30)
+        self.master.configure(bg=COLOR_BG_LOGIN)
+        
+        # ロゴ
+        logo_frame = tk.Frame(self.master, bg=COLOR_BG_LOGIN, pady=30)
+        logo_frame.pack(fill="x")
+        logo_inner = tk.Frame(logo_frame, bg=COLOR_BG_LOGIN)
+        logo_inner.pack()
+        tk.Label(logo_inner, text="GMOクリック", font=("Arial", 20, "bold"), fg="white", bg=COLOR_BG_LOGIN).pack(side="left")
+        tk.Label(logo_inner, text=" FX ", font=("Arial", 18, "bold", "italic"), fg="white", bg="#dba11c").pack(side="left", padx=5)
 
-    def do_login(self):
-        self.destroy()
-        self.main_app.deiconify()
+        # 入力フォーム
+        input_frame = tk.Frame(self.master, bg=COLOR_BG_LOGIN, padx=30)
+        input_frame.pack(fill="x", pady=10)
 
+        # ユーザーID
+        row1 = tk.Frame(input_frame, bg=COLOR_BG_LOGIN)
+        row1.pack(fill="x")
+        tk.Label(row1, text="ユーザーID/ログイン名", font=("Arial", 9), fg="white", bg=COLOR_BG_LOGIN).pack(side="left")
+        self.var_save_id = tk.BooleanVar(value=True)
+        tk.Checkbutton(row1, text="保存", var=self.var_save_id, bg=COLOR_BG_LOGIN, fg="white", 
+                              selectcolor=COLOR_BG_LOGIN, activebackground=COLOR_BG_LOGIN, activeforeground="white").pack(side="right")
+        self.name_entry = tk.Entry(input_frame, font=("Arial", 14), width=30)
+        self.name_entry.pack(fill="x", pady=(2, 15))
+
+        # パスワード
+        row2 = tk.Frame(input_frame, bg=COLOR_BG_LOGIN)
+        row2.pack(fill="x")
+        tk.Label(row2, text="ログインパスワード", font=("Arial", 9), fg="white", bg=COLOR_BG_LOGIN).pack(side="left")
+        self.var_save_pass = tk.BooleanVar(value=True)
+        tk.Checkbutton(row2, text="保存", var=self.var_save_pass, bg=COLOR_BG_LOGIN, fg="white", 
+                              selectcolor=COLOR_BG_LOGIN, activebackground=COLOR_BG_LOGIN, activeforeground="white").pack(side="right")
+        self.pass_entry = tk.Entry(input_frame, show="*", font=("Arial", 14), width=30)
+        self.pass_entry.pack(fill="x", pady=(2, 10))
+
+        # 設定パネル
+        panel_frame = tk.Frame(self.master, bg=COLOR_PANEL_LOGIN, padx=15, pady=5)
+        panel_frame.pack(fill="x", padx=30, pady=10)
+        p_row1 = tk.Frame(panel_frame, bg=COLOR_PANEL_LOGIN, pady=5)
+        p_row1.pack(fill="x")
+        tk.Label(p_row1, text="自動ログイン", font=("Arial", 10), fg="white", bg=COLOR_PANEL_LOGIN).pack(side="left")
+        self.draw_toggle(p_row1, is_on=False).pack(side="right")
+        tk.Frame(panel_frame, height=1, bg="#444").pack(fill="x")
+        p_row2 = tk.Frame(panel_frame, bg=COLOR_PANEL_LOGIN, pady=5)
+        p_row2.pack(fill="x")
+        tk.Label(p_row2, text="生体認証ログイン", font=("Arial", 10), fg="white", bg=COLOR_PANEL_LOGIN).pack(side="left")
+        self.draw_toggle(p_row2, is_on=True).pack(side="right")
+
+        tk.Label(self.master, text="ユーザーID・ログインパスワードをお忘れの場合", 
+                 font=("Arial", 9), fg="#aaa", bg=COLOR_BG_LOGIN, cursor="hand2").pack(pady=10)
+
+
+        # ログインボタン
+        btn_frame = tk.Frame(self.master, bg=COLOR_BG_LOGIN, padx=30, pady=10)
+        btn_frame.pack(fill="x")
+        self.login_button = tk.Button(btn_frame, text="ログイン", command=self.login, 
+                                      font=("Arial", 14, "bold"), bg=COLOR_BTN_LOGIN, fg="white", 
+                                      relief="flat", cursor="hand2", activebackground="#e0b030")
+        self.login_button.pack(fill="x", ipady=5)
+        
+        # フッター
+        footer_frame = tk.Frame(self.master, bg="#111", height=60)
+        footer_frame.pack(side="bottom", fill="x")
+        f_btn_area = tk.Frame(footer_frame, bg="#111", padx=10, pady=10)
+        f_btn_area.pack(fill="both", expand=True)
+        self.reg_button = tk.Button(f_btn_area, text="無料で口座開設", command=self.register,
+                                    font=("Arial", 10, "bold"), bg=COLOR_BTN_ACC, fg="white", relief="flat")
+        self.reg_button.pack(side="left", fill="both", expand=True, padx=5, ipady=5)
+        self.demo_button = tk.Button(f_btn_area, text="デモ取引を始める", command=self.master.destroy,
+                                     font=("Arial", 10, "bold"), bg=COLOR_BTN_DEMO, fg="white", relief="flat")
+        self.demo_button.pack(side="left", fill="both", expand=True, padx=5, ipady=5)
+
+    def draw_toggle(self, parent, is_on):
+        c = tk.Canvas(parent, width=40, height=20, bg=COLOR_PANEL_LOGIN, highlightthickness=0)
+        fill_color = "#4cd964" if is_on else "#999"
+        c.create_oval(2, 2, 18, 18, fill=fill_color, outline="")
+        c.create_oval(22, 2, 38, 18, fill=fill_color, outline="")
+        c.create_rectangle(10, 2, 30, 18, fill=fill_color, outline="")
+        circle_x = 30 if is_on else 10
+        c.create_oval(circle_x-7, 3, circle_x+7, 17, fill="white", outline="")
+        return c
+
+    def login(self):
+        username = self.name_entry.get()
+        password = self.pass_entry.get()
+        try:
+            with open(CSV_FILE, 'r') as f:
+                csv_data = csv.reader(f)
+                for user in csv_data:
+                    if len(user) >= 2 and user[0] == username and user[1] == password:
+                        self.success(username)
+                        return
+        except FileNotFoundError:
+            pass
+        self.fail()
+
+    def register(self):
+        username = self.name_entry.get()
+        password = self.pass_entry.get()
+        if username and password:
+            with open(CSV_FILE, 'a', newline='') as f:
+                csv.writer(f).writerow([username, password])
+
+    def fail(self):
+        self.login_button.config(bg="red", text="失敗")
+        self.master.after(1000, lambda: self.login_button.config(bg=COLOR_BTN_LOGIN, text="ログイン"))
+
+    def success(self, username):
+        self.login_button.config(bg="#4cd964", text="成功！")
+        self.master.after(500, lambda: [self.main.start(username), self.master.destroy()])
+
+# ---------------------------------------------------------
+# 起動処理
+# ---------------------------------------------------------
 if __name__ == "__main__":
     try:
         from ctypes import windll
@@ -499,5 +595,15 @@ if __name__ == "__main__":
     except: pass
 
     app = MainApp()
-    login = LoginWindow(app)
+    
+    # 1. ログイン用のウィンドウ枠を先に作る
+    login_window = tk.Toplevel(app)
+    login_window.title("Login")
+    login_window.configure(bg=COLOR_BG_MAIN)
+    center_window(login_window, 1000, 750) # ログイン画面は縦長
+    login_window.protocol("WM_DELETE_WINDOW", sys.exit)
+
+    # 2. 「ウィンドウ枠」と「アプリ本体」の2つを渡す
+    login = Login(login_window, app)
+
     app.mainloop()
