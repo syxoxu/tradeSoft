@@ -1,37 +1,66 @@
-# FX Trading Simulator (Desktop GUI)
+<div align="center">
+  <img src="https://cdn-icons-png.flaticon.com/512/2534/2534204.png" width="100">
+  
+  # GMO Click Style FX Simulator
+  
+  <img src="https://img.shields.io/badge/python-3.x-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/GUI-Tkinter-green?logo=python" alt="Tkinter">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
+  <img src="https://img.shields.io/badge/status-Active-success" alt="Status">
 
-A desktop FX trading simulation application built with Python and Tkinter.
-Designed with a modern dark-mode GUI inspired by professional Japanese trading platforms (e.g., GMO Click Securities), featuring real-time rate updates and interactive charting.
+  <br>
+  <a href="#-overview">Overview</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-demo">Demo</a> •
+  <a href="#-installation">Installation</a> •
+  <a href="#-author">Author</a>
+  
+  <br><br>
+</div>
 
-![Demo App Animation](https://via.placeholder.com/800x450?text=Please+Upload+Demo+GIF+Here)
+---
+
 ## 📖 Overview
 
-This project was developed to demonstrate **desktop GUI application development** and **asynchronous data handling**.
-It includes a built-in dummy data generator, allowing the application to run immediately without requiring external API keys or internet access.
+**GMO Click Style FX Simulator** is a desktop trading application built with **Python** and **Tkinter**.
+Designed to simulate the professional UI of Japanese securities platforms, featuring real-time rate updates, interactive charting, and high-performance rendering.
 
-## ✨ Key Features
+<div align="center">
+  <img src="images/demo.gif" width="700" alt="Demo Animation">
+</div>
 
-* **Authentication System:** User registration and login functionality (Local data management via CSV).
-* **Multi-View Interface:**
-    * **Home:** Asset summary and grid menu.
-    * **Trade:** Real-time rate list with color-coded indicators (Red/Blue) for price fluctuations.
-    * **Speed Order:** UI designed for one-click ordering.
-    * **Chart:** Interactive candlestick charts using `mplfinance` (Auto-resizing).
-    * **Market:** News feed list.
-* **Asynchronous Architecture:** Utilizing `threading` to fetch data in the background, ensuring the GUI never freezes.
-* **Optimized Rendering:** Implemented logic to update only changed values to prevent screen flickering.
+---
 
-## 🛠 Tech Stack
+## ✨ Features
 
-* **Language:** Python 3.x
-* **GUI Framework:** Tkinter
-* **Data Processing:** Pandas, NumPy
-* **Visualization:** Matplotlib, mplfinance
-* **Concurrency:** Threading
+* **📈 Professional UI:** Dark-mode interface inspired by real trading platforms.
+* **⚡ Real-time Simulation:** Multi-threaded data fetching for seamless updates.
+* **📊 Interactive Charts:** Candlestick charts powered by `mplfinance` with auto-resizing.
+* **🛡️ Order System:** "Speed Order" interface for one-click trading simulation.
 
-## 📦 Installation & Usage
+---
 
-### 1. Clone the repository
+## 📸 Screenshots
+
+| **Home View** | **Trade View** |
+|:---:|:---:|
+| <img src="images/home.png" width="400"> | <img src="images/trade.png" width="400"> |
+
+| **Chart Analysis** | **Speed Order** |
+|:---:|:---:|
+| <img src="images/chart.png" width="400"> | <img src="images/order.png" width="400"> |
+
+---
+
+## 📦 Installation
+
 ```bash
+# 1. Clone the repository
 git clone [https://github.com/syxoxu/tradeSoft.git](https://github.com/syxoxu/tradeSoft.git)
 cd tradeSoft
+
+# 2. Install dependencies
+pip install pandas numpy matplotlib mplfinance
+
+# 3. Run the app
+python main.py
