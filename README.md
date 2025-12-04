@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://cdn-icons-png.flaticon.com/512/2534/2534204.png" width="100">
   
-  # GMO Click Style FX Simulator
+  # Automatic Trading system
   
   <img src="https://img.shields.io/badge/python-3.x-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/GUI-Tkinter-green?logo=python" alt="Tkinter">
