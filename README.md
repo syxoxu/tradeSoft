@@ -26,7 +26,7 @@
 Designed to simulate the professional UI of Japanese securities platforms, featuring real-time rate updates, interactive charting, and high-performance rendering.
 
 <div align="center">
-  <img src="images/demo.gif" width="700" alt="Demo Animation">
+  <img src="images/demo.png" width="700" alt="Demo Animation">
 </div>
 
 ---
