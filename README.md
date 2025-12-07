@@ -33,10 +33,10 @@ Designed to simulate the professional UI of Japanese securities platforms, featu
 
 ## ✨ Features
 
-* ** Professional UI:** Dark-mode interface inspired by real trading platforms.
-* ** Real-time Simulation:** Multi-threaded data fetching for seamless updates.
-* ** Interactive Charts:** Candlestick charts powered by `mplfinance` with auto-resizing.
-* ** Order System:** "Speed Order" interface for one-click trading simulation.
+*  Professional UI:** Dark-mode interface inspired by real trading platforms.
+*  Real-time Simulation:** Multi-threaded data fetching for seamless updates.
+*  Interactive Charts:** Candlestick charts powered by `mplfinance` with auto-resizing.
+*  Order System:** "Speed Order" interface for one-click trading simulation.
 
 ---
 
